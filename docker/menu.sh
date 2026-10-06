@@ -181,10 +181,44 @@ install_template() {
     fi
 }
 
+# Pindahkan file project lama ke folder backup lalu pasang template bawaan.
+swap_to_template() {
+    local backup="$PROJECT_DIR/backup-$(date +%Y%m%d-%H%M%S)" item
+    mkdir -p "$backup" || return 1
+    for item in src public package.json package-lock.json remotion.config.ts tsconfig.json; do
+        [ -e "$PROJECT_DIR/$item" ] && mv "$PROJECT_DIR/$item" "$backup/"
+    done
+    info "File lama disimpan di ${backup}"
+    if [ -d "$PROJECT_DIR/node_modules" ]; then
+        info "Menghapus node_modules lama..."
+        rm -rf "$PROJECT_DIR/node_modules"
+    fi
+    install_template
+}
+
+has_remotion_dep() {
+    grep -q '"@remotion/cli"' "$PROJECT_DIR/package.json" 2>/dev/null
+}
+
 ensure_project() {
     if [ ! -f "$PROJECT_DIR/package.json" ]; then
         install_template || return 1
     fi
+
+    # package.json sudah ada tapi bukan project Remotion (mis. sisa aplikasi lain
+    # di server ini): npm install tidak akan membantu, jadi tawarkan template.
+    if [ ! -x "$BIN" ] && ! has_remotion_dep; then
+        warn "package.json di ${PROJECT_DIR} bukan project Remotion (tidak ada @remotion/cli)."
+        if [ "$STDIN_OPEN" != "1" ]; then
+            fail "Pasang template lewat menu 6 > 4 (Reset ke template bawaan)."
+            return 1
+        fi
+        pick "Folder server ini belum berisi project Remotion" "Batal" \
+            "Pasang template Remotion bawaan (file lama dipindah ke folder backup)" || return 1
+        [ "$PICK" -eq 1 ] || return 1
+        swap_to_template || return 1
+    fi
+
     if [ ! -x "$BIN" ]; then
         if [ -d "$REMOTION_TEMPLATE/node_modules" ] \
             && cmp -s "$PROJECT_DIR/package.json" "$REMOTION_TEMPLATE/package.json"; then
@@ -192,7 +226,7 @@ ensure_project() {
             mkdir -p "$PROJECT_DIR/node_modules"
             copy_tree "$REMOTION_TEMPLATE/node_modules" "$PROJECT_DIR/node_modules"
         else
-            info "node_modules belum ada, menjalankan npm install..."
+            info "Remotion belum terpasang, menjalankan npm install..."
             run_job npm install || true
             # pakai Chrome dari image supaya tidak perlu download lagi
             if [ -d "$REMOTION_TEMPLATE/node_modules/.remotion" ] \
@@ -204,11 +238,12 @@ ensure_project() {
         fi
     fi
     if [ ! -x "$BIN" ]; then
-        fail "Remotion belum terpasang di project ini (@remotion/cli tidak ada di node_modules)."
-        echo -e "${GRAY}Buka menu \"Kelola project\" lalu pilih \"Install dependencies\".${RESET}"
+        fail "Remotion belum terpasang di project ini (npm install tidak menghasilkan @remotion/cli)."
+        echo -e "${GRAY}Cek pesan npm di atas, atau pakai menu 6 > 4 (Reset ke template bawaan).${RESET}"
         return 1
     fi
     mkdir -p "$OUT_DIR"
+    [ -n "$TMPDIR" ] && mkdir -p "$TMPDIR" 2>/dev/null
     return 0
 }
 
@@ -402,15 +437,7 @@ reset_template() {
         info "Dibatalkan."
         return 0
     fi
-    local backup="$PROJECT_DIR/backup-$(date +%Y%m%d-%H%M%S)" item
-    mkdir -p "$backup" || return 1
-    for item in src public package.json package-lock.json remotion.config.ts tsconfig.json; do
-        [ -e "$PROJECT_DIR/$item" ] && mv "$PROJECT_DIR/$item" "$backup/"
-    done
-    info "File lama disimpan di ${backup}"
-    info "Menghapus node_modules lama..."
-    rm -rf "$PROJECT_DIR/node_modules"
-    install_template
+    swap_to_template
 }
 
 action_project() {

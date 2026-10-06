@@ -1,0 +1,82 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-10-06T00:00:00+00:00",
+    "name": "Remotion",
+    "author": "sairidev@gmail.com",
+    "description": "Remotion (video dari kode React) dengan menu bernomor: Studio, render video/gambar, kelola project. Image sudah berisi Chrome Headless Shell dan project template, jadi tidak ada proses install di panel.",
+    "features": null,
+    "docker_images": {
+        "Remotion (Node 22)": "ghcr.io/GANTI_USERNAME/remotion:latest"
+    },
+    "file_denylist": [],
+    "startup": "remotion-menu",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"[remotion] ready\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/ash\r\n# Tidak ada yang perlu dipasang: project template disalin oleh image saat server pertama kali menyala.\r\nmkdir -p /mnt/server\r\nexit 0",
+            "container": "ghcr.io/pterodactyl/installers:alpine",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Aksi otomatis",
+            "description": "Yang dijalankan kalau menu utama tidak dijawab (misalnya setelah server restart sendiri). studio = Remotion Studio menyala otomatis, menu = tetap menunggu di menu.",
+            "env_variable": "AUTO_ACTION",
+            "default_value": "studio",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:studio,menu",
+            "field_type": "text"
+        },
+        {
+            "name": "Waktu tunggu menu (detik)",
+            "description": "Berapa detik menu utama menunggu jawaban sebelum menjalankan aksi otomatis. 0 = tunggu terus.",
+            "env_variable": "MENU_TIMEOUT",
+            "default_value": "30",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:0|max:600",
+            "field_type": "text"
+        },
+        {
+            "name": "Tampilkan IP di banner",
+            "description": "true menampilkan IP publik server di banner. Berlaku setelah restart.",
+            "env_variable": "SHOW_IP",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Entry point",
+            "description": "Path file yang memanggil registerRoot(), relatif dari folder server. Kosongkan untuk deteksi otomatis (src/index.ts).",
+            "env_variable": "REMOTION_ENTRY",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:128",
+            "field_type": "text"
+        },
+        {
+            "name": "Concurrency render",
+            "description": "Jumlah tab Chrome yang dipakai saat render (contoh 2 atau 50%). Kosongkan agar Remotion memilih sendiri. Kecilkan kalau server kehabisan RAM.",
+            "env_variable": "RENDER_CONCURRENCY",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:8",
+            "field_type": "text"
+        }
+    ]
+}
